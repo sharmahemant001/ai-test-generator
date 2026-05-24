@@ -340,6 +340,9 @@ def parse_requirements(text: str) -> Dict[str, Any]:
 
     _dedupe_shadowed_semantic_aliases(fields, listed_fields)
 
+    if not fields and not success_condition:
+        return dict(PARSER_ERROR)
+
     if not fields:
         return {
             'fields': {},

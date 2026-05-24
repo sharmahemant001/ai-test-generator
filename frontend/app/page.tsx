@@ -27,253 +27,625 @@ const categoryLabels: Record<string, string> = {
   validation: 'Validation',
 };
 
-function getConstraintCount(parsedConstraints?: TestGenerationResponse['parsed_constraints']) {
+const exampleRequirements: Record<string, string> = {
+  Signup: `Signup API
+Fields:
+email
+password
+phone
+
+Rules:
+Email valid
+Password minimum 8 characters
+Phone exactly 10 digits
+
+Signup succeeds only when all fields are valid`,
+  Payment: `Payment API
+Fields:
+amount
+currency
+coupon
+
+Rules:
+Amount > 0
+Maximum amount 50000
+Currency required
+Coupon optional
+
+Payment succeeds only when validations pass`,
+  Checkout: `Checkout API
+Fields:
+customerEmail
+deliveryAddress
+contactNumber
+
+Rules:
+Email valid
+Address required
+Phone exactly 10
+
+Checkout succeeds only when validations pass`,
+};
+
+function getConstraintCount(
+  parsedConstraints?: TestGenerationResponse['parsed_constraints']
+) {
+
   if (!parsedConstraints?.fields) {
     return 0;
   }
 
-  return Object.values(parsedConstraints.fields).reduce((count, config) => {
-    const ruleCount = Object.keys(config || {}).length;
-    return count + Math.max(ruleCount, 1);
-  }, 0);
+  return Object.values(
+    parsedConstraints.fields
+  ).reduce((count, config) => {
+
+    const ruleCount =
+      Object.keys(config || {}).length;
+
+    return count + Math.max(ruleCount,1);
+
+  },0);
+
 }
 
-function describeRule(field: string, config: Record<string, unknown>) {
-  if (config.type === 'email') {
-    return `${field} -> valid format`;
+function describeRule(
+  field:string,
+  config:Record<string,unknown>
+){
+
+  if(config.type==='email'){
+    return `${field} → valid format`;
   }
-  if (typeof config.min_length === 'number') {
-    return `${field} -> min length ${config.min_length}`;
+
+  if(typeof config.min_length==='number'){
+    return `${field} → min length ${config.min_length}`;
   }
-  if (typeof config.exact_length === 'number') {
-    return `${field} -> exact length ${config.exact_length}`;
+
+  if(typeof config.exact_length==='number'){
+    return `${field} → exact length ${config.exact_length}`;
   }
-  if (config.future_only) {
-    return `${field} -> future date validation`;
+
+  if(config.future_only){
+    return `${field} → future only`;
   }
-  if (config.required === false) {
-    return `${field} -> optional`;
+
+  if(config.required===false){
+    return `${field} → optional`;
   }
-  if (config.required === true) {
-    return `${field} -> required`;
+
+  if(config.required===true){
+    return `${field} → required`;
   }
-  if (config.range && typeof config.range === 'object') {
-    const range = config.range as { min?: number; max?: number };
-    if (range.min !== undefined && range.max !== undefined) {
-      return `${field} -> ${range.min}-${range.max}`;
+
+  if(config.range){
+
+    const range =
+      config.range as {
+        min?:number;
+        max?:number;
+      };
+
+    if(
+      range.min!==undefined &&
+      range.max!==undefined
+    ){
+
+      return `${field} → ${range.min}-${range.max}`;
+
     }
-    return `${field} -> numeric boundaries`;
+
   }
-  return `${field} -> validation rule`;
+
+  return `${field} → validation`;
+
 }
 
-export default function HomePage() {
-  const [requirements, setRequirements] = useState('');
-  const [testCases, setTestCases] = useState<TestCase[]>([]);
-  const [summary, setSummary] = useState('');
-  const [coverage, setCoverage] = useState(0);
-  const [parsedConstraints, setParsedConstraints] = useState<TestGenerationResponse['parsed_constraints']>();
-  const [coverageDetails, setCoverageDetails] = useState<TestGenerationResponse['coverage_details']>();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [loadingIndex, setLoadingIndex] = useState(0);
+export default function HomePage(){
 
-  useEffect(() => {
-    if (!isLoading) {
-      setLoadingIndex(0);
-      return;
-    }
+const [
+requirements,
+setRequirements
+]=useState('');
 
-    const interval = window.setInterval(() => {
-      setLoadingIndex((current) => (current + 1) % loadingStages.length);
-    }, 700);
+const [
+testCases,
+setTestCases
+]=useState<TestCase[]>([]);
 
-    return () => window.clearInterval(interval);
-  }, [isLoading]);
+const [
+summary,
+setSummary
+]=useState('');
 
-  const constraintCount = useMemo(() => getConstraintCount(parsedConstraints), [parsedConstraints]);
-  const categoryCounts = useMemo(() => {
-    return testCases.reduce<Record<string, number>>((counts, testCase) => {
-      counts[testCase.type] = (counts[testCase.type] || 0) + 1;
-      return counts;
-    }, {});
-  }, [testCases]);
-  const categoriesCovered = useMemo(() => {
-    if (coverageDetails?.category_coverage) {
-      return Object.values(coverageDetails.category_coverage).filter(Boolean).length;
-    }
-    return Object.values(categoryCounts).filter((count) => count > 0).length;
-  }, [categoryCounts, coverageDetails]);
-  const detectedFields = parsedConstraints?.fields ? Object.keys(parsedConstraints.fields) : [];
-  const detectedRules = parsedConstraints?.fields
-    ? Object.entries(parsedConstraints.fields).map(([field, config]) => describeRule(field, config))
-    : [];
-  const hasUnderstanding = detectedFields.length > 0 || detectedRules.length > 0;
-  const dynamicSummary = testCases.length
-    ? `Generated ${testCases.length} test cases with ${coverage}% coverage across ${constraintCount} parsed constraints. Includes ${[
-        categoryCounts.boundary ? 'boundary tests' : '',
-        categoryCounts.negative ? 'negative tests' : '',
-        categoryCounts.business_flow ? 'business flow tests' : '',
-        categoryCounts.edge ? 'edge cases' : '',
-      ]
-        .filter(Boolean)
-        .join(', ')}.`
-    : summary;
+const [
+coverage,
+setCoverage
+]=useState(0);
 
-  const handleGenerate = async () => {
-    if (!requirements.trim()) {
-      setError('Please provide requirements or API specification text.');
-      setSummary('');
-      setTestCases([]);
-      setCoverage(0);
-      setParsedConstraints(undefined);
-      setCoverageDetails(undefined);
-      return;
-    }
+const [
+parsedConstraints,
+setParsedConstraints
+]=useState<
+TestGenerationResponse['parsed_constraints']
+>();
 
-    setError('');
-    setSummary('');
-    setTestCases([]);
-    setCoverage(0);
-    setParsedConstraints(undefined);
-    setCoverageDetails(undefined);
-    setIsLoading(true);
+const [
+coverageDetails,
+setCoverageDetails
+]=useState<
+TestGenerationResponse['coverage_details']
+>();
 
-    try {
-      const response = await generateTestCases(requirements.trim());
-      setSummary(response.summary || 'Generated test cases based on your requirements.');
-      setTestCases(response.testCases || []);
-      setCoverage(response.coverage ?? Math.min(100, 40 + (response.testCases?.length || 0) * 10));
-      setParsedConstraints(response.parsed_constraints);
-      setCoverageDetails(response.coverage_details);
-    } catch (err) {
-      setError('Try improving requirements or retry.');
-      setSummary('');
-      setTestCases([]);
-      setCoverage(0);
-      setParsedConstraints(undefined);
-      setCoverageDetails(undefined);
-    } finally {
-      setIsLoading(false);
-    }
+const [
+isLoading,
+setIsLoading
+]=useState(false);
+
+const [
+error,
+setError
+]=useState('');
+
+const [
+loadingIndex,
+setLoadingIndex
+]=useState(0);
+
+const [
+selectedCategory,
+setSelectedCategory
+]=useState('ALL');
+
+useEffect(()=>{
+
+if(!isLoading){
+
+setLoadingIndex(0);
+
+return;
+
+}
+
+const interval =
+window.setInterval(()=>{
+
+setLoadingIndex(
+(current)=>
+(current+1)
+%
+loadingStages.length
+);
+
+},700);
+
+return ()=>window.clearInterval(interval);
+
+},[isLoading]);
+
+const constraintCount =
+useMemo(
+()=>getConstraintCount(parsedConstraints),
+[parsedConstraints]
+);
+
+const categoryCounts =
+useMemo(()=>{
+
+return testCases.reduce<
+Record<string,number>
+>((counts,test)=>{
+
+counts[test.type]=
+(counts[test.type]||0)+1;
+
+return counts;
+
+},{});
+
+},[testCases]);
+
+const filteredTestCases =
+
+selectedCategory==='ALL'
+
+? testCases
+
+: testCases.filter(
+
+(test)=>
+
+test.type.toUpperCase()
+
+===
+
+selectedCategory
+
+);
+
+const categoriesCovered =
+useMemo(()=>{
+
+if(
+coverageDetails?.category_coverage
+){
+
+return Object
+.values(
+coverageDetails
+.category_coverage
+)
+.filter(Boolean)
+.length;
+
+}
+
+return Object
+.values(categoryCounts)
+.filter(
+count=>count>0
+)
+.length;
+
+},
+[
+categoryCounts,
+coverageDetails
+]
+);
+
+const detectedFields =
+parsedConstraints?.fields
+?
+Object.keys(
+parsedConstraints.fields
+)
+:
+[];
+
+const detectedRules =
+parsedConstraints?.fields
+?
+Object.entries(
+parsedConstraints.fields
+)
+.map(
+([field,config])=>
+describeRule(
+field,
+config
+)
+)
+:
+[];
+
+const hasParserOutput =
+detectedRules.length > 0 ||
+!!parsedConstraints?.success_condition;
+
+const dynamicSummary =
+testCases.length
+
+?
+
+`Generated
+${testCases.length}
+test cases with
+${coverage}% coverage
+across
+${constraintCount}
+parsed constraints.`
+
+:
+
+summary;
+
+const downloadJson = () => {
+  const payload = {
+    summary,
+    coverage,
+    coverage_details: coverageDetails,
+    parsed_constraints: parsedConstraints,
+    testCases,
   };
 
-  return (
-    <main className="page-shell">
-      <Navbar />
-
-      <section className="hero-panel">
-        <div className="hero-copy">
-          <h1>AI Test Case Generation</h1>
-          <p>Paste requirements, API specs, or feature stories and generate comprehensive test cases instantly.</p>
-        </div>
-
-        <div className="architecture-visual" aria-hidden="true">
-          {['Requirements', 'Parser', 'Rule Engine', 'AI Generator', 'Coverage Engine', 'Test Cases'].map((item, index) => (
-            <div className="architecture-step" key={item}>
-              <span>{item}</span>
-              {index < 5 ? <b>↓</b> : null}
-            </div>
-          ))}
-        </div>
-
-        <div className="action-panel">
-          <RequirementInput value={requirements} onChange={setRequirements} />
-          <GenerateButton onClick={handleGenerate} disabled={isLoading} label={loadingStages[loadingIndex]} />
-          {error ? (
-            <div className="error-card" role="alert">
-              <strong>Warning</strong>
-              <h2>Unable to generate test cases</h2>
-              <p>{error}</p>
-            </div>
-          ) : null}
-        </div>
-      </section>
-
-      {isLoading ? (
-        <div className="loading-panel">
-          <LoadingSpinner />
-          <p>{loadingStages[loadingIndex]}</p>
-        </div>
-      ) : null}
-
-      {!isLoading && !error && !testCases.length ? (
-        <section className="empty-state">
-          <div className="empty-illustration" aria-hidden="true">
-            <span>QA</span>
-            <i />
-            <i />
-            <i />
-          </div>
-          <p>Paste requirements, API specs, or feature stories to generate test coverage instantly.</p>
-        </section>
-      ) : null}
-
-      {hasUnderstanding ? (
-        <section className="understanding-panel fade-in">
-          <div>
-            <span className="panel-kicker">AI Understanding</span>
-            <h2>Detected constraints extracted from requirements</h2>
-          </div>
-          <div className="understanding-grid">
-            <div>
-              <h3>Detected Fields</h3>
-              <div className="field-list">
-                {detectedFields.map((field) => (
-                  <span key={field}>✓ {field}</span>
-                ))}
-              </div>
-            </div>
-            <div>
-              <h3>Detected Rules</h3>
-              <div className="rule-list">
-                {detectedRules.map((rule) => (
-                  <span key={rule}>✓ {rule}</span>
-                ))}
-                {parsedConstraints?.success_condition ? <span>✓ Business flow validation</span> : null}
-              </div>
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      {summary && testCases.length > 0 ? (
-        <section className="summary-panel">
-          <h2>Quick Summary</h2>
-          <p>{dynamicSummary}</p>
-        </section>
-      ) : null}
-
-      {testCases.length > 0 ? (
-        <section className="results-panel">
-          <div className="results-header">
-            <div>
-              <h2>Generated Test Cases</h2>
-              <div className="category-chips">
-                {Object.entries(categoryLabels).map(([key, label]) =>
-                  categoryCounts[key] ? (
-                    <span className={`category-chip chip-${key}`} key={key}>
-                      {label} {categoryCounts[key]}
-                    </span>
-                  ) : null,
-                )}
-              </div>
-            </div>
-            <CoverageScore
-              count={testCases.length}
-              score={coverage}
-              constraintsParsed={constraintCount}
-              categoriesCovered={categoriesCovered}
-            />
-          </div>
-
-          <div className="cards-grid">
-            {testCases.map((testCase, index) => (
-              <TestCaseCard key={testCase.id} testCase={testCase} index={index} />
-            ))}
-          </div>
-        </section>
-      ) : null}
-    </main>
+  const blob = new Blob(
+    [JSON.stringify(payload, null, 2)],
+    { type: 'application/json' }
   );
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'generated_tests.json';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+const handleGenerate = async () => {
+  if (!requirements.trim()) {
+    setError('Please provide requirements.');
+    return;
+  }
+
+  setError('');
+  setIsLoading(true);
+
+  try {
+    const response = await generateTestCases(requirements);
+    setSummary(response.summary);
+    setTestCases(response.testCases || []);
+    setCoverage(response.coverage || 0);
+    setParsedConstraints(response.parsed_constraints);
+    setCoverageDetails(response.coverage_details);
+  } catch (error) {
+    setError(error instanceof Error ? error.message : 'Unable to generate test cases');
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+return (
+
+<main className="page-shell">
+
+<Navbar/>
+
+<section className="hero-panel">
+
+<div className="hero-copy">
+
+<h1>
+AI Test Case Generation
+</h1>
+
+<p>
+
+Paste requirements,
+API specs,
+or feature stories.
+
+</p>
+
+</div>
+
+<section className="example-section">
+  <h3 className="example-title">Try Examples</h3>
+  <div className="example-buttons">
+    {Object.entries(exampleRequirements).map(([name, value]) => (
+      <button
+        key={name}
+        type="button"
+        className="example-button"
+        onClick={() => setRequirements(value)}
+      >
+        {name}
+      </button>
+    ))}
+  </div>
+</section>
+
+<RequirementInput
+value={requirements}
+onChange={setRequirements}
+/>
+
+<GenerateButton
+onClick={handleGenerate}
+disabled={isLoading}
+label={loadingStages[loadingIndex]}
+/>
+
+</section>
+
+{error &&
+
+<div className="error-card">
+
+{error}
+
+</div>
+
+}
+
+{isLoading &&
+
+<div className="loading-panel">
+
+<LoadingSpinner/>
+
+<p>
+
+{loadingStages[
+loadingIndex
+]}
+
+</p>
+
+</div>
+
+}
+
+{hasParserOutput &&
+
+<section className="understanding-panel">
+
+<h2>Constraint Parser Output</h2>
+
+<div className="rule-list">
+
+{detectedRules.map(
+(rule)=>(
+<span key={rule}>
+
+✓ {rule}
+
+</span>
+)
+)}
+
+{parsedConstraints?.success_condition ? (
+<span>
+✓ business flow validation
+</span>
+) : null}
+
+</div>
+
+</section>
+
+}
+
+{!!testCases.length &&
+
+<section
+className="
+results-panel
+"
+>
+
+<div className="results-header">
+
+<div>
+
+<h2>Generated Test Cases</h2>
+
+<div className="filter-row">
+
+<button
+onClick={()=>
+setSelectedCategory(
+'ALL'
+)
+}
+className={
+selectedCategory==='ALL'
+?
+'filter-chip active'
+:
+'filter-chip'
+}
+>
+
+All
+(
+{testCases.length}
+)
+
+</button>
+
+{Object.entries(
+categoryLabels
+).map(
+([key,label])=>
+
+categoryCounts[key]
+
+?
+
+<button
+
+key={key}
+
+onClick={()=>
+
+setSelectedCategory(
+key.toUpperCase()
+)
+
+}
+
+className={
+
+selectedCategory===
+
+key.toUpperCase()
+
+?
+
+'filter-chip active'
+
+:
+
+'filter-chip'
+
+}
+
+>
+
+{label}
+
+(
+{categoryCounts[key]}
+)
+
+</button>
+
+:
+
+null
+
+)}
+
+</div>
+
+</div>
+
+<div className="results-side">
+  <CoverageScore
+    count={testCases.length}
+    score={coverage}
+    constraintsParsed={constraintCount}
+    categoriesCovered={categoriesCovered}
+  />
+  <button
+    type="button"
+    className="export-button"
+    onClick={downloadJson}
+  >
+    Export JSON
+  </button>
+</div>
+
+</div>
+
+<p>
+
+{dynamicSummary}
+
+</p>
+
+<div
+className="
+cards-grid
+"
+>
+
+{filteredTestCases.map(
+(test,index)=>(
+
+<TestCaseCard
+
+key={test.id}
+
+testCase={test}
+
+index={index}
+
+/>
+
+)
+)}
+
+</div>
+
+</section>
+
+}
+
+</main>
+
+);
+
 }
