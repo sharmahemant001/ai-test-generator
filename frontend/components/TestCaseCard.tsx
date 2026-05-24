@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { TestCase } from '../types/testCase';
 
 type TestCaseCardProps = {
@@ -26,8 +27,48 @@ function CodeBlock({ label, value }: { label: string; value: string }) {
 }
 
 export default function TestCaseCard({ testCase, index = 0 }: TestCaseCardProps) {
+  const ref = useRef<HTMLElement | null>(null);
+  const prefersReducedMotion = typeof window !== 'undefined' &&
+    (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false);
+  const [visible, setVisible] = useState(prefersReducedMotion);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+
+    if (prefersReducedMotion) {
+      // If user prefers reduced motion, reveal immediately and skip observer.
+      setVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setVisible(true);
+            if (el) observer.unobserve(el);
+          }
+        });
+      },
+      { threshold: 0.12 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [prefersReducedMotion]);
+
+  const delayMs = prefersReducedMotion ? 0 : Math.min(index, 20) * 70; // cap delay for safety
+
+  const style: React.CSSProperties = {
+    opacity: visible ? 1 : 0,
+    transform: visible ? 'translateY(0)' : 'translateY(20px)',
+    transition: prefersReducedMotion ? 'none' : 'opacity 450ms ease, transform 450ms ease',
+    transitionDelay: `${visible ? delayMs : 0}ms`,
+  };
+
   return (
-    <article className="test-card fade-in" style={{ animationDelay: `${Math.min(index, 12) * 35}ms` }}>
+    <article ref={ref} className="test-card" style={style}>
       <div className="test-card-header">
         <span className={`tag tag-${testCase.type}`}>{testCase.type.toUpperCase()}</span>
         <h3>{testCase.title}</h3>

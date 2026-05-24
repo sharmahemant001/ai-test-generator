@@ -378,45 +378,64 @@ return (
   <main className="page-shell">
 
 <Navbar />
+  <section className="hero-panel hero-premium">
+    <div className="hero-left">
+      <div className="hero-top">
+        <span className="badge">⚡ Hackathon Demo Ready</span>
+        <h1 className="hero-title">AI Test Case Generation Agent</h1>
+        <p className="hero-sub">Generate Functional, Boundary, Negative, Edge, and Business Flow test cases instantly.</p>
+        <div className="value-chips">
+          <span className="chip small">Constraint Parser</span>
+          <span className="chip small">Coverage Engine</span>
+          <span className="chip small">Rule Engine</span>
+          <span className="chip small">Export JSON</span>
+        </div>
+      </div>
 
-<section className="hero-panel">
-  <div className="hero-copy">
-    <div className="hero-header">
-      <div>
-        <p className="eyebrow">Hackathon-ready AI SaaS</p>
-        <h1>AI test generation from requirements, rules, and API fields</h1>
+      <div className="hero-action">
+        <div className="input-card">
+          <RequirementInput value={requirements} onChange={setRequirements} />
+        </div>
+
+        <div className="right-controls">
+          <div className="examples-card">
+            <h4>Try Examples</h4>
+            <div className="example-buttons">
+              {Object.entries(exampleRequirements).map(([name, value]) => (
+                <button
+                  key={name}
+                  type="button"
+                  className="example-button"
+                  onClick={() => setRequirements(value)}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="action-cta">
+            <GenerateButton onClick={handleGenerate} disabled={isLoading} label={loadingStages[loadingIndex]} />
+            <button className="export-quick" onClick={downloadJson}>Export JSON</button>
+          </div>
+        </div>
       </div>
-      <span className="hero-badge">Finalist UX</span>
     </div>
-    <p className="hero-subtitle">
-      Generate coverage-aware test cases, infer fields automatically, and export results as JSON — all from free-form API spec text.
-    </p>
-    <div className="hero-metrics">
-      <div className="metric-card">
-        <span>⚡</span>
-        <strong>Fast previews</strong>
-        <p>Instant iteration flow</p>
-      </div>
-      <div className="metric-card">
-        <span>🧠</span>
-        <strong>Smart parser</strong>
-        <p>Fields inferred from rules</p>
-      </div>
-      <div className="metric-card">
-        <span>✅</span>
-        <strong>Coverage-ready</strong>
-        <p>Built for edge cases</p>
-      </div>
-    </div>
-  </div>
-  <aside className="architecture-visual">
-    <div className="arch-node">Requirements</div>
-    <div className="arch-arrow">→</div>
-    <div className="arch-node">Parser</div>
-    <div className="arch-arrow">→</div>
-    <div className="arch-node">Test Cases</div>
-  </aside>
-</section>
+
+    <aside className="architecture-visual">
+      <div className="arch-node">Requirements</div>
+      <div className="arch-arrow">↓</div>
+      <div className="arch-node">Constraint Parser</div>
+      <div className="arch-arrow">↓</div>
+      <div className="arch-node">Rule Engine</div>
+      <div className="arch-arrow">↓</div>
+      <div className="arch-node">Edge Generator</div>
+      <div className="arch-arrow">↓</div>
+      <div className="arch-node">Coverage Engine</div>
+      <div className="arch-arrow">↓</div>
+      <div className="arch-node">Export</div>
+    </aside>
+  </section>
 
 <section className="example-section">
   <h3 className="example-title">Try examples</h3>
@@ -471,6 +490,8 @@ return (
     {parserErrorDetails.length > 0 && (
       <div className="error-details">
         <p>Please provide:</p>
+
+  
         <ul>
           {parserErrorDetails.map((item) => (
             <li key={item}>{item}</li>
@@ -584,6 +605,19 @@ return (
 </section>
 )}
 
+  <Footer />
 </main>
 );
+}
+
+function Footer() {
+  return (
+    <footer className="app-footer">
+      <div>
+        <strong>AI Test Case Generation Agent</strong>
+        <div>Constraint Parser • Rule Engine • Coverage Engine • Edge Case Generator</div>
+      </div>
+      <div style={{ opacity: 0.85 }}>Built for Agentic AI Hackathon</div>
+    </footer>
+  );
 }
