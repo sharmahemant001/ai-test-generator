@@ -381,7 +381,7 @@ return (
   <section className="hero-panel hero-premium">
     <div className="hero-left">
       <div className="hero-top">
-        <span className="badge">⚡ Hackathon Demo Ready</span>
+
         <h1 className="hero-title">AI Test Case Generation Agent</h1>
         <p className="hero-sub">Generate Functional, Boundary, Negative, Edge, and Business Flow test cases instantly.</p>
         <div className="value-chips">
