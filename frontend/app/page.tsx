@@ -11,11 +11,10 @@ import { generateTestCases } from '../services/api';
 import { TestCase, TestGenerationResponse } from '../types/testCase';
 
 const loadingStages = [
-  'Analyzing requirements...',
-  'Parsing constraints...',
-  'Generating boundary tests...',
-  'Creating edge cases...',
-  'Calculating coverage...',
+  'Parsing Constraints',
+  'Generating Boundary Tests',
+  'Expanding Edge Cases',
+  'Coverage Analysis',
 ];
 
 const categoryLabels: Record<string, string> = {
@@ -162,19 +161,9 @@ coverage,
 setCoverage
 ]=useState(0);
 
-const [
-parsedConstraints,
-setParsedConstraints
-]=useState<
-TestGenerationResponse['parsed_constraints']
->();
+const [parsedConstraints, setParsedConstraints] = useState<TestGenerationResponse['parsed_constraints']>();
 
-const [
-coverageDetails,
-setCoverageDetails
-]=useState<
-TestGenerationResponse['coverage_details']
->();
+const [coverageDetails, setCoverageDetails] = useState<TestGenerationResponse['coverage_details']>();
 
 const [
 isLoading,
@@ -245,22 +234,9 @@ return counts;
 },[testCases]);
 
 const filteredTestCases =
-
-selectedCategory==='ALL'
-
-? testCases
-
-: testCases.filter(
-
-(test)=>
-
-test.type.toUpperCase()
-
-===
-
-selectedCategory
-
-);
+  selectedCategory === 'ALL'
+    ? testCases
+    : testCases.filter((test) => test.type.toUpperCase() === selectedCategory);
 
 const categoriesCovered =
 useMemo(()=>{
@@ -339,6 +315,18 @@ parsed constraints.`
 
 summary;
 
+const showEmptyState =
+!testCases.length && !isLoading && !error;
+
+const parserErrorDetails =
+error.includes('Provide API fields')
+? [
+  'API fields',
+  'Validation rules',
+  'Feature requirements',
+]
+: [];
+
 const downloadJson = () => {
   const payload = {
     summary,
@@ -387,31 +375,51 @@ const handleGenerate = async () => {
 };
 
 return (
+  <main className="page-shell">
 
-<main className="page-shell">
-
-<Navbar/>
+<Navbar />
 
 <section className="hero-panel">
-
-<div className="hero-copy">
-
-<h1>
-AI Test Case Generation
-</h1>
-
-<p>
-
-Paste requirements,
-API specs,
-or feature stories.
-
-</p>
-
-</div>
+  <div className="hero-copy">
+    <div className="hero-header">
+      <div>
+        <p className="eyebrow">Hackathon-ready AI SaaS</p>
+        <h1>AI test generation from requirements, rules, and API fields</h1>
+      </div>
+      <span className="hero-badge">Finalist UX</span>
+    </div>
+    <p className="hero-subtitle">
+      Generate coverage-aware test cases, infer fields automatically, and export results as JSON — all from free-form API spec text.
+    </p>
+    <div className="hero-metrics">
+      <div className="metric-card">
+        <span>⚡</span>
+        <strong>Fast previews</strong>
+        <p>Instant iteration flow</p>
+      </div>
+      <div className="metric-card">
+        <span>🧠</span>
+        <strong>Smart parser</strong>
+        <p>Fields inferred from rules</p>
+      </div>
+      <div className="metric-card">
+        <span>✅</span>
+        <strong>Coverage-ready</strong>
+        <p>Built for edge cases</p>
+      </div>
+    </div>
+  </div>
+  <aside className="architecture-visual">
+    <div className="arch-node">Requirements</div>
+    <div className="arch-arrow">→</div>
+    <div className="arch-node">Parser</div>
+    <div className="arch-arrow">→</div>
+    <div className="arch-node">Test Cases</div>
+  </aside>
+</section>
 
 <section className="example-section">
-  <h3 className="example-title">Try Examples</h3>
+  <h3 className="example-title">Try examples</h3>
   <div className="example-buttons">
     {Object.entries(exampleRequirements).map(([name, value]) => (
       <button
@@ -426,84 +434,89 @@ or feature stories.
   </div>
 </section>
 
-<RequirementInput
-value={requirements}
-onChange={setRequirements}
-/>
+<RequirementInput value={requirements} onChange={setRequirements} />
 
 <GenerateButton
-onClick={handleGenerate}
-disabled={isLoading}
-label={loadingStages[loadingIndex]}
+  onClick={handleGenerate}
+  disabled={isLoading}
+  label={loadingStages[loadingIndex]}
 />
 
-</section>
-
-{error &&
-
-<div className="error-card">
-
-{error}
-
-</div>
-
-}
-
-{isLoading &&
-
-<div className="loading-panel">
-
-<LoadingSpinner/>
-
-<p>
-
-{loadingStages[
-loadingIndex
-]}
-
-</p>
-
-</div>
-
-}
-
-{hasParserOutput &&
-
-<section className="understanding-panel">
-
-<h2>Constraint Parser Output</h2>
-
-<div className="rule-list">
-
-{detectedRules.map(
-(rule)=>(
-<span key={rule}>
-
-✓ {rule}
-
-</span>
-)
+{showEmptyState && (
+  <section className="empty-state">
+    <div>
+      <h2>Ready to generate your first test suite</h2>
+      <p>
+        Paste API requirements and let the parser infer fields, validation rules, and business flow.
+      </p>
+    </div>
+    <div className="empty-actions">
+      {Object.keys(exampleRequirements).map((name) => (
+        <button
+          key={name}
+          type="button"
+          className="example-button"
+          onClick={() => setRequirements(exampleRequirements[name])}
+        >
+          {name} example
+        </button>
+      ))}
+    </div>
+  </section>
 )}
 
-{parsedConstraints?.success_condition ? (
-<span>
-✓ business flow validation
-</span>
-) : null}
+{error && (
+  <div className="error-card">
+    <p className="error-title">⚠ {error}</p>
+    {parserErrorDetails.length > 0 && (
+      <div className="error-details">
+        <p>Please provide:</p>
+        <ul>
+          {parserErrorDetails.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      </div>
+    )}
+  </div>
+)}
 
-</div>
+{isLoading && (
+  <div className="loading-panel">
+    <LoadingSpinner />
+    <div className="loading-copy">
+      <p>{loadingStages[loadingIndex]}</p>
+      <div className="loading-steps">
+        {loadingStages.map((stage, index) => (
+          <span
+            key={stage}
+            className={index === loadingIndex ? 'loading-step active' : 'loading-step'}
+          >
+            {stage}
+          </span>
+        ))}
+      </div>
+    </div>
+  </div>
+)}
 
-</section>
+{hasParserOutput && (
+  <section className="understanding-panel">
+    <div className="understanding-header">
+      <h2>Constraint Parser Output</h2>
+      <p>Detected fields and validation rules from your description.</p>
+    </div>
+    <div className="rule-list">
+      {detectedRules.map((rule) => (
+        <span key={rule}>✓ {rule}</span>
+      ))}
+      {parsedConstraints?.success_condition ? <span>✓ business flow validation</span> : null}
+    </div>
+  </section>
+)}
 
-}
-
-{!!testCases.length &&
-
-<section
-className="
-results-panel
-"
->
+{!!testCases.length && (
+  <section className="results-panel">
 
 <div className="results-header">
 
@@ -514,78 +527,24 @@ results-panel
 <div className="filter-row">
 
 <button
-onClick={()=>
-setSelectedCategory(
-'ALL'
-)
-}
-className={
-selectedCategory==='ALL'
-?
-'filter-chip active'
-:
-'filter-chip'
-}
+  onClick={() => setSelectedCategory('ALL')}
+  className={`filter-chip filter-chip-all ${selectedCategory === 'ALL' ? 'active' : ''}`}
 >
-
-All
-(
-{testCases.length}
-)
-
+  All ({testCases.length})
 </button>
 
-{Object.entries(
-categoryLabels
-).map(
-([key,label])=>
-
-categoryCounts[key]
-
-?
-
-<button
-
-key={key}
-
-onClick={()=>
-
-setSelectedCategory(
-key.toUpperCase()
-)
-
-}
-
-className={
-
-selectedCategory===
-
-key.toUpperCase()
-
-?
-
-'filter-chip active'
-
-:
-
-'filter-chip'
-
-}
-
->
-
-{label}
-
-(
-{categoryCounts[key]}
-)
-
-</button>
-
-:
-
-null
-
+{Object.entries(categoryLabels).map(([key, label]) =>
+  categoryCounts[key] ? (
+    <button
+      key={key}
+      onClick={() => setSelectedCategory(key.toUpperCase())}
+      className={`filter-chip filter-chip-${key} ${
+        selectedCategory === key.toUpperCase() ? 'active' : ''
+      }`}
+    >
+      {label} ({categoryCounts[key]})
+    </button>
+  ) : null
 )}
 
 </div>
@@ -616,36 +575,15 @@ null
 
 </p>
 
-<div
-className="
-cards-grid
-"
->
-
-{filteredTestCases.map(
-(test,index)=>(
-
-<TestCaseCard
-
-key={test.id}
-
-testCase={test}
-
-index={index}
-
-/>
-
-)
-)}
-
+<div className="cards-grid">
+  {filteredTestCases.map((test, index) => (
+    <TestCaseCard key={test.id} testCase={test} index={index} />
+  ))}
 </div>
 
 </section>
-
-}
+)}
 
 </main>
-
 );
-
 }

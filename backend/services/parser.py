@@ -12,7 +12,7 @@ SEMANTIC_ALIASES = {
 FieldConstraints = Dict[str, Any]
 PARSER_ERROR = {
     'error': 'Unable to extract requirements',
-    'message': 'Provide API specs or feature requirements',
+    'message': 'Provide API fields, rules, or feature requirements',
 }
 
 

@@ -30,6 +30,7 @@ Phone exactly 10 digits
 
 Signup succeeds only when all fields are valid`}
       />
+      <span className="char-counter">{value.length} chars</span>
     </label>
   );
 }
