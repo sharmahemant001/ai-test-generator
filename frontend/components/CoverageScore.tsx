@@ -13,9 +13,9 @@ export default function CoverageScore({ count, score, constraintsParsed = 0, cat
         <strong>{score}%</strong>
       </div>
       <div className="coverage-metrics">
-        <span>{count} Tests Generated</span>
-        <span>{constraintsParsed} Constraints Parsed</span>
-        <span>{categoriesCovered} Categories Covered</span>
+          <span><strong className="metric-number">{count}</strong> Tests Generated</span>
+          <span><strong className="metric-number">{constraintsParsed}</strong> Constraints Parsed</span>
+          <span><strong className="metric-number">{categoriesCovered}</strong> Categories Covered</span>
       </div>
       <div className="coverage-bar">
         <div className="coverage-fill" style={{ width: `${score}%` }} />

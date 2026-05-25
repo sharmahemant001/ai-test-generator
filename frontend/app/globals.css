@@ -95,19 +95,19 @@ button {
 }
 
 .hero-panel {
-  display:grid;
-  gap:24px;
-  padding:32px;
-  border-radius:28px;
-
-  background:rgba(17,24,39,.68);
-
-  backdrop-filter:blur(18px);
-
-  border:1px solid rgba(255,255,255,.08);
-
-  box-shadow:
-  0 8px 40px rgba(0,0,0,.35);
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 28px;
+  padding-top: 32px;
+  padding-bottom: 32px;
+  padding-left: 32px;
+  padding-right: 32px;
+  border-radius: 28px;
+  overflow: hidden;
+  background: rgba(17,24,39,.68);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 8px 40px rgba(0,0,0,.35);
 }
 
 .hero-copy h1 {
@@ -214,12 +214,12 @@ rgba(99,102,241,.35);
 }
 
 .architecture-visual {
-  grid-column: 2;
-  grid-row: 1 / span 2;
   align-self: start;
   display: grid;
   gap: 12px;
-  padding: 22px;
+  padding: 20px;
+  max-height: 520px;
+  overflow-y: auto;
   border-radius: 24px;
   background: rgba(30, 41, 59, 0.8);
   backdrop-filter: blur(12px);
@@ -245,7 +245,13 @@ rgba(99,102,241,.35);
 }
 
 .input-group textarea {
-  min-height: 240px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-height: 220px;
+  max-height: 260px;
+  overflow: auto;
+  resize: vertical;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: transparent;
   color: #f8fafc;
@@ -332,7 +338,8 @@ color:
 
 .summary-panel,
 .results-panel {
-  margin-top: 32px;
+  margin-top: 28px;
+  margin-bottom: 0;
   padding: 24px;
   border-radius: 20px;
   background: rgba(17, 24, 39, 0.65);
@@ -578,10 +585,6 @@ body,
   width: 100%;
 }
 
-.hero-panel {
-  grid-template-columns: minmax(0, 1fr) 220px;
-}
-
 .hero-copy,
 .action-panel {
   min-width: 0;
@@ -620,6 +623,17 @@ border:
 
 textarea {
   max-width: 100%;
+}
+
+/* Ensure textarea global constraints */
+textarea {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-height: 220px;
+  max-height: 260px;
+  overflow: auto;
+  resize: vertical;
 }
 
 .generate-button {
@@ -934,7 +948,7 @@ pre {
   top: 18px;
   min-width: 0;
   padding: 18px;
-  background: rgba(99, 102, 241, 0.15);
+  background: linear-gradient(180deg, rgba(99,102,241,0.08), rgba(79,70,229,0.06));
   backdrop-filter: blur(12px);
   border: 1px solid rgba(99, 102, 241, 0.2);
   box-shadow: 0 8px 32px rgba(99, 102, 241, 0.2);
@@ -947,21 +961,37 @@ pre {
   justify-items: end;
 }
 
+
 .export-button {
   align-self: start;
   padding: 12px 18px;
   border-radius: 14px;
-  border: 1px solid #2563eb;
-  background: #2563eb;
+  border: none;
+  background: linear-gradient(90deg, #4f46e5, #7c3aed, #6366f1);
   color: #ffffff;
   font-weight: 700;
-  transition: transform 0.18s ease, background-color 0.18s ease;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.18);
+  transition: transform 0.22s cubic-bezier(.2,.9,.3,1), box-shadow 0.18s ease;
 }
 
 .export-button:hover {
-  background: #1d4ed8;
-  transform: translateY(-1px);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(99, 102, 241, 0.28);
 }
+
+/* quick export used in hero right controls */
+.export-quick {
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(90deg, #4f46e5, #7c3aed);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 8px 20px rgba(99,102,241,0.12);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.export-quick:hover { transform: translateY(-2px); }
 
 .export-button:active {
   transform: translateY(0);
@@ -978,9 +1008,16 @@ pre {
   display: grid;
   gap: 6px;
   margin: 10px 0 14px;
-  color: #4338ca;
-  font-size: 0.86rem;
-  font-weight: 800;
+  color: #e6e9ff;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.coverage-metrics .metric-number {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #fff;
+  margin-right: 8px;
 }
 
 .coverage-fill {
@@ -1038,16 +1075,17 @@ pre {
 }
 
 .empty-state{
-
-background:
-rgba(17,24,39,.7);
-
-backdrop-filter:
-blur(14px);
-
-border:
-1px solid rgba(255,255,255,.06);
-
+  display: grid;
+  gap: 18px;
+  align-items: center;
+  justify-items: center;
+  min-height: 180px;
+  margin-top: 28px;
+  padding: 28px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(17,24,39,0.68), rgba(17,24,39,0.6));
+  border: 1px solid rgba(255,255,255,0.04);
+  box-shadow: 0 10px 40px rgba(99,102,241,0.06);
 }
 
 .empty-actions {

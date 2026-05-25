@@ -437,29 +437,7 @@ return (
     </aside>
   </section>
 
-<section className="example-section">
-  <h3 className="example-title">Try examples</h3>
-  <div className="example-buttons">
-    {Object.entries(exampleRequirements).map(([name, value]) => (
-      <button
-        key={name}
-        type="button"
-        className="example-button"
-        onClick={() => setRequirements(value)}
-      >
-        {name}
-      </button>
-    ))}
-  </div>
-</section>
-
-<RequirementInput value={requirements} onChange={setRequirements} />
-
-<GenerateButton
-  onClick={handleGenerate}
-  disabled={isLoading}
-  label={loadingStages[loadingIndex]}
-/>
+  {/* Single hero section above; no duplicate inputs or buttons */}
 
 {showEmptyState && (
   <section className="empty-state">
@@ -469,18 +447,7 @@ return (
         Paste API requirements and let the parser infer fields, validation rules, and business flow.
       </p>
     </div>
-    <div className="empty-actions">
-      {Object.keys(exampleRequirements).map((name) => (
-        <button
-          key={name}
-          type="button"
-          className="example-button"
-          onClick={() => setRequirements(exampleRequirements[name])}
-        >
-          {name} example
-        </button>
-      ))}
-    </div>
+    {/* Example action buttons removed to prevent duplicate UI — use hero examples */}
   </section>
 )}
 
@@ -611,13 +578,6 @@ return (
 }
 
 function Footer() {
-  return (
-    <footer className="app-footer">
-      <div>
-        <strong>AI Test Case Generation Agent</strong>
-        <div>Constraint Parser • Rule Engine • Coverage Engine • Edge Case Generator</div>
-      </div>
-      <div style={{ opacity: 0.85 }}>Built for Agentic AI Hackathon</div>
-    </footer>
-  );
+  // Footer removed for cleaner UI per polish request
+  return null;
 }
