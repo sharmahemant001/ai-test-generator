@@ -275,13 +275,13 @@ python main.py
 Frontend:
 
 ```
-localhost:3000
+https://ai-test-generator-orcin.vercel.app
 ```
 
 Backend:
 
 ```
-localhost:8000
+https://ai-test-generator-fc41.onrender.com
 ```
 
 ---
