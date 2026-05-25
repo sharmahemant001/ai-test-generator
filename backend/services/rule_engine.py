@@ -93,6 +93,17 @@ def _exact_length_value(field: str, length: int) -> str:
     return 'x' * max(length, 0)
 
 
+def _enum_invalid_value(valid_values: List[str]) -> str:
+    invalid = 'invalid'
+    if any(invalid.lower() == v.lower() for v in valid_values):
+        invalid = f'not{valid_values[0]}'
+    return invalid
+
+
+def _truncate_to_max(value: str, max_length: int) -> str:
+    return value[:max_length] if len(value) > max_length else value
+
+
 def build_test_cases(requirements: str, constraints: ConstraintSet) -> List[Dict[str, Any]]:
     fields = constraints.get('fields', {})
     success_condition = constraints.get('success_condition', '')
@@ -149,10 +160,14 @@ def build_test_cases(requirements: str, constraints: ConstraintSet) -> List[Dict
     if 'password' in fields:
         password_field = fields['password']
         min_length = password_field.get('min_length', 8)
+        max_length = password_field.get('max_length')
+        require_uppercase = password_field.get('require_uppercase', False)
+        require_digit = password_field.get('require_digit', False)
+
         _add_case(
             results,
             'NEGATIVE',
-            f'Password shorter than minimum length',
+            'Password shorter than minimum length',
             f'Password with {min_length - 1} characters should fail minimum-length validation.',
             {'password': 'x' * max(min_length - 1, 1)},
             'Validation fails because password is too short.',
@@ -165,14 +180,74 @@ def build_test_cases(requirements: str, constraints: ConstraintSet) -> List[Dict
             {'password': 'x' * min_length},
             'Validation succeeds for password at minimum length.',
         )
-        _add_case(
-            results,
-            'FUNCTIONAL',
-            'Password longer than minimum length',
-            f'Password with {min_length + 1} characters should pass.',
-            {'password': 'x' * (min_length + 1)},
-            'Validation succeeds for a password longer than the minimum length.',
-        )
+
+        if max_length:
+            _add_case(
+                results,
+                'BOUNDARY',
+                'Password below maximum length',
+                f'Password with {max_length - 1} characters should pass maximum-length validation.',
+                {'password': 'x' * max(max_length - 1, 1)},
+                'Validation succeeds for password above minimum boundary.',
+            )
+            _add_case(
+                results,
+                'BOUNDARY',
+                'Password at maximum length',
+                f'Password with exactly {max_length} characters should pass maximum-length validation.',
+                {'password': 'x' * max_length},
+                'Validation succeeds for password above minimum boundary.',
+            )
+            _add_case(
+                results,
+                'NEGATIVE',
+                'Password above maximum length',
+                f'Password with {max_length + 1} characters should fail maximum-length validation.',
+                {'password': 'x' * (max_length + 1)},
+                'Validation fails because password is too long.',
+            )
+        else:
+            _add_case(
+                results,
+                'FUNCTIONAL',
+                'Password longer than minimum length',
+                f'Password with {min_length + 1} characters should pass.',
+                {'password': 'x' * (min_length + 1)},
+                'Validation succeeds for a password above minimum boundary.',
+            )
+
+        if require_uppercase:
+            _add_case(
+                results,
+                'NEGATIVE',
+                'Password missing uppercase',
+                'Password must contain at least one uppercase character.',
+                {'password': 'password1' if require_digit else 'password'},
+                'Validation fails because password must contain uppercase characters.',
+            )
+        if require_digit:
+            _add_case(
+                results,
+                'NEGATIVE',
+                'Password missing digit',
+                'Password must contain at least one numeric character.',
+                {'password': 'Password' if require_uppercase else 'password'},
+                'Validation fails because password must contain numbers.',
+            )
+
+        if require_uppercase or require_digit:
+            valid_password = 'Password1' if require_uppercase and require_digit else 'Password' if require_uppercase else 'password1'
+            if max_length and len(valid_password) > max_length:
+                valid_password = valid_password[:max_length]
+            _add_case(
+                results,
+                'FUNCTIONAL',
+                'Password meets complexity requirements',
+                'Password with required complexity should pass validation.',
+                {'password': valid_password},
+                'Validation succeeds for a password above minimum boundary.',
+            )
+
         _add_case(
             results,
             'NEGATIVE',
@@ -181,7 +256,7 @@ def build_test_cases(requirements: str, constraints: ConstraintSet) -> List[Dict
             {'password': ''},
             'Validation fails because password is required and must meet minimum length.',
         )
-        valid_payload['password'] = 'x' * max(min_length, 8)
+        valid_payload['password'] = 'Password1' if require_uppercase and require_digit else 'x' * max(min_length, 8)
 
     phone_fields = [field for field in fields if _is_phone_field(field)]
     for field in phone_fields:
@@ -270,6 +345,62 @@ def build_test_cases(requirements: str, constraints: ConstraintSet) -> List[Dict
             f'Validation fails because {field} is too long.',
         )
         valid_payload[field] = valid_value
+
+    for field, config in fields.items():
+        if field in phone_fields:
+            continue
+        if 'enum' in config and config['enum']:
+            valid_value = config['enum'][0]
+            invalid_value = _enum_invalid_value(config['enum'])
+            _add_case(
+                results,
+                'FUNCTIONAL',
+                f'{field} valid enum',
+                f'{field} should pass when provided with a valid enum option.',
+                {field: valid_value},
+                f'Validation succeeds for a valid {field} option.',
+            )
+            _add_case(
+                results,
+                'NEGATIVE',
+                f'{field} invalid enum value',
+                f'{field} should fail when provided with a value outside the allowed options.',
+                {field: invalid_value},
+                f'Validation fails because {field} value is not permitted.',
+            )
+            valid_payload[field] = valid_value
+
+        if 'max_length' in config and config['max_length'] and 'exact_length' not in config:
+            max_length = config['max_length']
+            below_max = _truncate_to_max(_exact_length_value(field, max_length - 1), max_length - 1)
+            at_max = _exact_length_value(field, max_length)
+            above_max = _exact_length_value(field, max_length + 1)
+            _add_case(
+                results,
+                'BOUNDARY',
+                f'{field} below maximum length',
+                f'{field} with {max_length - 1} characters should pass maximum-length validation.',
+                {field: below_max},
+                f'Validation succeeds for {field} below the maximum length.',
+            )
+            _add_case(
+                results,
+                'BOUNDARY',
+                f'{field} at maximum length',
+                f'{field} with exactly {max_length} characters should pass maximum-length validation.',
+                {field: at_max},
+                f'Validation succeeds for {field} at the maximum length.',
+            )
+            _add_case(
+                results,
+                'NEGATIVE',
+                f'{field} above maximum length',
+                f'{field} with {max_length + 1} characters should fail maximum-length validation.',
+                {field: above_max},
+                f'Validation fails because {field} is too long.',
+            )
+            if field not in valid_payload:
+                valid_payload[field] = at_max
 
     if 'age' in fields and 'range' in fields['age']:
         age_range = fields['age']['range']
@@ -437,7 +568,10 @@ def build_test_cases(requirements: str, constraints: ConstraintSet) -> List[Dict
 
     for field, config in fields.items():
         if field not in valid_payload:
-            valid_payload[field] = _default_valid_value(field, config)
+            value = _default_valid_value(field, config)
+            if isinstance(value, str) and config.get('max_length'):
+                value = _truncate_to_max(value, config['max_length'])
+            valid_payload[field] = value
 
     for field, config in fields.items():
         if config.get('required'):

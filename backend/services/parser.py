@@ -257,6 +257,67 @@ def _extract_numeric_constraints(field: str, text: str) -> Dict[str, Any]:
     return constraints
 
 
+def _extract_enum_values(field: str, text: str) -> List[str]:
+    """Extract allowed enum values from text."""
+    field_key = re.escape(_field_key(field))
+    normalized = text.replace('\n', ' ')
+
+    patterns = [
+        rf'{field_key}\s+(?:allowed\s+)?\b(?:values?|options?)\b\s*:?\s*([A-Za-z0-9_ ,]+)',
+        rf'\b(?:allowed|valid)\b\s+{field_key}(?:\s+\bvalues?\b|\s+\boptions?\b)?\s*:?\s*([A-Za-z0-9_ ,]+)',
+        rf'{field_key}\s+must\s+be\s+one\s+of\s+([A-Za-z0-9_ ,]+)',
+        rf'{field_key}\s+may\s+be\s+one\s+of\s+([A-Za-z0-9_ ,]+)',
+        rf'{field_key}\s*:\s*([A-Za-z0-9_ ,]+)',
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, normalized, re.I)
+        if match:
+            values_str = match.group(1)
+            values = [v.strip() for v in re.split(r'[;,\s]+', values_str) if v.strip()]
+            if len(values) > 1:
+                return values
+
+    return []
+
+
+def _extract_password_rules(field: str, text: str) -> Dict[str, bool]:
+    """Extract password complexity rules."""
+    if field != 'password':
+        return {}
+    
+    rules = {}
+    normalized = text.lower()
+    
+    if re.search(r'password.*(?:must\s+)?contain.*uppercase|uppercase.*password', normalized):
+        rules['require_uppercase'] = True
+    if re.search(r'password.*(?:must\s+)?contain.*lowercase|lowercase.*password', normalized):
+        rules['require_lowercase'] = True
+    if re.search(r'password.*(?:must\s+)?contain.*(?:digit|number)|(?:digit|number).*password', normalized):
+        rules['require_digit'] = True
+    if re.search(r'password.*(?:must\s+)?contain.*(?:special|symbol|punctuation)|(?:special|symbol|punctuation).*password', normalized):
+        rules['require_special'] = True
+    
+    return rules
+
+
+def _extract_max_length(field: str, text: str) -> int:
+    """Extract maximum length constraint."""
+    field_key = re.escape(_field_key(field))
+    
+    patterns = [
+        rf'{field_key}.*(?:maximum|max|up to)\s+(\d+)\s*(?:characters|chars?)',
+        rf'(?:maximum|max|up to)\s+(\d+)\s*(?:characters|chars?)\s+.*{field_key}',
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, text, re.I)
+        if match:
+            return int(match.group(1))
+    
+    return 0
+
+
 def parse_requirements(text: str) -> Dict[str, Any]:
     if _parser_confidence(text) < 2:
         return dict(PARSER_ERROR)
@@ -287,6 +348,9 @@ def parse_requirements(text: str) -> Dict[str, Any]:
         max_match = re.search(r'password.*(?:maximum|max(?:imum)?).*?(\d+)(?:\s*(?:characters|chars?))?', normalized)
         if max_match:
             fields['password']['max_length'] = int(max_match.group(1))
+        # Extract password complexity rules
+        password_rules = _extract_password_rules('password', normalized)
+        fields['password'].update(password_rules)
         fields['password'].setdefault('required', _field_required('password', normalized))
 
     for field_name in active_fields:
@@ -297,6 +361,15 @@ def parse_requirements(text: str) -> Dict[str, Any]:
             if match:
                 fields[field_name]['exact_length'] = int(match.group(1))
             fields[field_name].setdefault('required', _field_required(field_name, normalized))
+
+        if field_name not in ['email', 'password', 'phone', 'age']:
+            enum_values = _extract_enum_values(field_name, normalized)
+            if enum_values:
+                fields[field_name]['enum'] = enum_values
+
+            max_length = _extract_max_length(field_name, normalized)
+            if max_length:
+                fields[field_name]['max_length'] = max_length
 
     if 'age' in fields:
         match = re.search(r'age.*(?:between|from)\s*(\d+)\s*(?:and|-)\s*(\d+)', normalized)
