@@ -11,10 +11,10 @@ import { generateTestCases } from '../services/api';
 import { TestCase, TestGenerationResponse } from '../types/testCase';
 
 const loadingStages = [
-  'Parsing Constraints',
-  'Generating Boundary Tests',
-  'Expanding Edge Cases',
-  'Coverage Analysis',
+  'Analyzing requirements...',
+  'Extracting validation constraints...',
+  'Generating boundary and negative tests...',
+  'Building coverage matrix...',
 ];
 
 const categoryLabels: Record<string, string> = {
@@ -442,10 +442,16 @@ return (
 {showEmptyState && (
   <section className="empty-state">
     <div>
-      <h2>Ready to generate your first test suite</h2>
+      <h2>AI ready.</h2>
       <p>
-        Paste API requirements and let the parser infer fields, validation rules, and business flow.
+        Paste requirements to automatically generate:
       </p>
+      <ul className="empty-benefits">
+        <li>• Functional tests</li>
+        <li>• Boundary validation</li>
+        <li>• Negative scenarios</li>
+        <li>• Business flow coverage</li>
+      </ul>
     </div>
     {/* Example action buttons removed to prevent duplicate UI — use hero examples */}
   </section>

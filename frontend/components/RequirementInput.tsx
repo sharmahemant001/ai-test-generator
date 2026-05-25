@@ -6,29 +6,11 @@ type RequirementInputProps = {
 export default function RequirementInput({ value, onChange }: RequirementInputProps) {
   return (
     <label className="input-group">
-      <span>Paste requirements or API spec</span>
+      <span>Paste API requirements, feature rules, or business validation logic</span>
       <textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        placeholder={`Signup API
-
-Fields:
-
-email
-
-password
-
-phone
-
-Rules:
-
-Email valid
-
-Password minimum 8 characters
-
-Phone exactly 10 digits
-
-Signup succeeds only when all fields are valid`}
+        placeholder={`Signup API\n\nFields:\nemail\npassword\nphone\n\nRules:\nEmail valid\nPassword minimum 8 characters\nPhone exactly 10 digits\n\nSignup succeeds only when all fields are valid`}
       />
       <span className="char-counter">{value.length} chars</span>
     </label>
